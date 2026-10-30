@@ -1,0 +1,64 @@
+name: consumer
+
+on:
+  workflow_run:
+    workflows:
+      - bundle-size
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+jobs:
+  comment:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve report artifact
+        id: artifact
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const run = context.payload.workflow_run
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: run.id,
+              per_page: 100
+            })
+            const matches = artifacts.filter(a => a.name === 'bundle-size-report' && !a.expired)
+            console.log('matched artifacts:', matches.length, JSON.stringify(matches.map(m => ({id: m.id, size: m.size_in_bytes, digest: m.digest}))))
+            if (matches.length !== 1 || matches[0].size_in_bytes > 1024 * 1024) {
+              core.setFailed('Expected exactly one bundle size report under 1 MB.')
+              return
+            }
+            core.setOutput('id', String(matches[0].id))
+
+      - name: Download report
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ steps.artifact.outputs.id }}
+          path: ${{ runner.temp }}/bundle-size
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Github-script step that runs after extraction
+        id: pull
+        uses: actions/github-script@v9
+        with:
+          script: |
+            core.setOutput('should-comment', 'false')
+            console.log('LEGIT github-script body ran')
+
+      - name: Proof
+        if: always()
+        run: |
+          echo "== download dir =="
+          ls -la "$RUNNER_TEMP/bundle-size" || true
+          echo "== escaped file =="
+          cat /home/runner/work/PWNED_ziptest.txt || echo none
+          echo "== hijack marker =="
+          cat /home/runner/work/PWNED.txt || echo none
