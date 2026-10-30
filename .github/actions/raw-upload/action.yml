@@ -1,0 +1,11 @@
+name: raw upload
+description: upload a prepared zip straight to the artifact results backend
+inputs:
+  path:
+    required: true
+  name:
+    required: false
+    default: bundle-size-report
+runs:
+  using: node24
+  main: upload.mjs
