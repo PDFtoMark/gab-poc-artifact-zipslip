@@ -1,0 +1,42 @@
+name: slip-test
+on:
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  produce:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: forge artifact with traversal entries
+        uses: ./.github/actions/forge
+  consume:
+    needs: produce
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Download artifact (same as target)
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: slip-test
+          path: ${{ runner.temp }}/pnpm-audit-result
+          run-id: ${{ github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: check escape
+        if: always()
+        run: |
+          echo "RUNNER_TEMP=$RUNNER_TEMP"
+          ls -la "$RUNNER_TEMP" || true
+          ls -la "$RUNNER_TEMP/pnpm-audit-result" || true
+          test -f "$RUNNER_TEMP/SLIP_ESCAPE.txt" && { echo TRAVERSAL-ESCAPED-CONFIRMED; cat "$RUNNER_TEMP/SLIP_ESCAPE.txt"; } || echo NO-TRAVERSAL
+          ls -la /home/runner/work/_actions/actions/github-script/*/dist/index.js 2>/dev/null | head -3 || true
+      - name: github-script (hijacked?)
+        if: always()
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            console.log("ORIGINAL-GITHUB-SCRIPT-RAN")
