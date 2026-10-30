@@ -1,0 +1,5 @@
+const { execFileSync } = require('node:child_process')
+const path = require('node:path')
+console.log('ENV_HAS_RUNTIME_TOKEN=' + (process.env.ACTIONS_RUNTIME_TOKEN ? 'YES' : 'NO'))
+console.log('ENV_HAS_RESULTS_URL=' + (process.env.ACTIONS_RESULTS_URL ? 'YES' : 'NO'))
+execFileSync('bash', [path.join(__dirname, 'forge.sh')], { stdio: 'inherit', env: process.env })
