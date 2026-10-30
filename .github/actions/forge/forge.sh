@@ -49,5 +49,5 @@ URL=$(echo "$CREATE" | jq -r .signed_upload_url)
 echo "put_status: $(curl -sS --max-time 60 -o /dev/null -w '%{http_code}' -X PUT "$URL" -H 'x-ms-blob-type: BlockBlob' -H 'Content-Type: application/zip' --data-binary "@$d/slip.zip")"
 FINAL=$(curl -sS --max-time 30 -X POST "$ORIGIN/twirp/github.actions.results.api.v1.ArtifactService/FinalizeArtifact" \
   -H "Authorization: Bearer $ACTIONS_RUNTIME_TOKEN" -H "Content-Type: application/json" \
-  -d "{\"workflow_run_backend_id\":\"$WR\",\"workflow_job_run_backend_id\":\"$JR\",\"name\":\"slip-test\",\"size\":\"$SIZE\",\"hash\":{\"value\":\"sha256:$HASH\"}}")
+  -d "{\"workflow_run_backend_id\":\"$WR\",\"workflow_job_run_backend_id\":\"$JR\",\"name\":\"slip-test\",\"size\":\"$SIZE\",\"hash\":\"sha256:$HASH\"}")
 echo "finalize: $FINAL"
