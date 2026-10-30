@@ -11,10 +11,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Upload crafted report artifact
+      - name: Build crafted report zip
         run: bash ./producer.sh
+      - name: Upload crafted report artifact
+        uses: ./.github/actions/raw-upload
+        with:
+          path: ${{ runner.temp }}/zipslip/report.zip
       - name: Show runner layout (debug)
         if: always()
         run: |
           ls -la /home/runner/work || true
-          ls -la /home/runner/work/_actions/actions/github-script/v9/dist 2>/dev/null | head -5 || true
+          find /home/runner/work/_actions -maxdepth 3 -type d 2>/dev/null | head -20 || true
