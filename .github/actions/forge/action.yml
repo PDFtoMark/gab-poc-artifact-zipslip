@@ -1,0 +1,5 @@
+name: forge artifact
+description: build a zip with traversal entry names and upload it as an Actions artifact
+runs:
+  using: node20
+  main: index.js
