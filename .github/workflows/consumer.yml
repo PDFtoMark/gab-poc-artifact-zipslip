@@ -17,48 +17,23 @@ jobs:
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve report artifact
-        id: artifact
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const run = context.payload.workflow_run
-            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: run.id,
-              per_page: 100
-            })
-            const matches = artifacts.filter(a => a.name === 'bundle-size-report' && !a.expired)
-            console.log('matched artifacts:', matches.length, JSON.stringify(matches.map(m => ({id: m.id, size: m.size_in_bytes, digest: m.digest}))))
-            if (matches.length !== 1 || matches[0].size_in_bytes > 1024 * 1024) {
-              core.setFailed('Expected exactly one bundle size report under 1 MB.')
-              return
-            }
-            core.setOutput('id', String(matches[0].id))
-
-      - name: Download report
-        uses: actions/download-artifact@v8
-        with:
-          artifact-ids: ${{ steps.artifact.outputs.id }}
-          path: ${{ runner.temp }}/bundle-size
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-
-      - name: Github-script step that runs after extraction
-        id: pull
-        uses: actions/github-script@v9
-        with:
-          script: |
-            core.setOutput('should-comment', 'false')
-            console.log('LEGIT github-script body ran')
-
-      - name: Proof
-        if: always()
+      - name: Context debug
         run: |
-          echo "== download dir =="
-          ls -la "$RUNNER_TEMP/bundle-size" || true
-          echo "== escaped file =="
-          cat /home/runner/work/PWNED_ziptest.txt || echo none
-          echo "== hijack marker =="
-          cat /home/runner/work/PWNED.txt || echo none
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "head_sha=${{ github.event.workflow_run.head_sha }}"
+          echo "head_branch=${{ github.event.workflow_run.head_branch }}"
+          echo "head_repo=${{ github.event.workflow_run.head_repository.full_name }}"
+          echo "prs=${{ toJSON(github.event.workflow_run.pull_requests) }}"
+      - name: Checkout like the real workflow
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - name: Which tree did we get
+        run: |
+          git log -1 --format='%H %s'
+          ls -la
+          echo "--- file check ---"
+          test -f test/bundle/compare.mjs && echo "has test/bundle/compare.mjs" || echo "no compare.mjs here"
+          test -f producer.sh && echo "has producer.sh (PR head)" || echo "no producer.sh (base)"
